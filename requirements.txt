@@ -7,3 +7,5 @@ sentence-transformers
 chromadb
 huggingface-hub
 pypdf
+elevenlabs
+requests
