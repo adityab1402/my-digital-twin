@@ -251,15 +251,7 @@ function greetUser() {
 
 window.addEventListener('load', function(){
     loadVoices();
-    setTimeout(updateGreeting, 300);
-    setInterval(updateGreeting, 60000);
-    setTimeout(function(){
-        var today = new Date().toDateString();
-        if(sessionStorage.getItem('greeted') !== today) {
-            greetUser();
-            sessionStorage.setItem('greeted', today);
-        }
-    }, 2000);
+    
 });
 </script>
 """, unsafe_allow_html=True)
