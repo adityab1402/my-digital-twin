@@ -594,7 +594,7 @@ with st.sidebar:
     st.markdown("<br>", unsafe_allow_html=True)
 
     st.markdown("""
-    <a href="https://www.linkedin.com/in/aditya-bambole/" target="_blank"
+    <a href="https://www.linkedin.com/in/aditya-bambole"
        style="display:block; background:rgba(0,119,181,0.15); border:1px solid rgba(0,119,181,0.3);
               border-radius:10px; padding:8px 14px; text-align:center; color:#0077B5 !important;
               text-decoration:none; font-size:0.82rem; font-weight:600; margin-bottom:8px;">
