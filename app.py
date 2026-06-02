@@ -699,7 +699,7 @@ if mode == "💬 Chat with Me":
     suggested_q = None
     with q_col1:
         if st.button("👋 Tell me about yourself", use_container_width=True):
-            suggested_q = "Tell me about yourself professionally"
+            suggested_q = "Give me a complete professional introduction about Aditya including his education, work experience, certifications, and career goal"
     with q_col2:
         if st.button("🏗️ Construction experience?", use_container_width=True):
             suggested_q = "Tell me about your construction project management experience"
