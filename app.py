@@ -3,6 +3,8 @@ import google.generativeai as genai
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
 import random
+import requests
+import base64
 
 st.set_page_config(
     page_title="Aditya Bambole | Digital Twin",
@@ -177,22 +179,12 @@ hr { border-color:var(--border) !important; margin:16px 0 !important; }
 ::-webkit-scrollbar { width:6px; }
 ::-webkit-scrollbar-track { background:var(--bg); }
 ::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
+
+/* Audio player styling */
+audio { width:100%; margin-top:8px; }
 </style>
 
 <script>
-var preferredVoice = null;
-function loadVoices() {
-    var voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) {
-        preferredVoice = voices.find(function(v){ return v.name.indexOf('Google')>-1 && v.lang.indexOf('en')===0; })
-                      || voices.find(function(v){ return v.lang.indexOf('en-US')===0; })
-                      || voices.find(function(v){ return v.lang.indexOf('en')===0; })
-                      || voices[0];
-    }
-}
-window.speechSynthesis.onvoiceschanged = loadVoices;
-loadVoices();
-
 function getGreeting() {
     var h = new Date().getHours();
     if (h>=5&&h<12) return {text:'Good Morning',emoji:'🌅',sub:'Rise and shine! Ready to make today count?',badge:'Morning'};
@@ -200,7 +192,6 @@ function getGreeting() {
     if (h>=17&&h<21) return {text:'Good Evening',emoji:'🌆',sub:'Great time to learn about Aditya!',badge:'Evening'};
     return {text:'Good Night',emoji:'🌙',sub:'Working late? I am here for you!',badge:'Night'};
 }
-
 function updateGreeting() {
     var g = getGreeting();
     var t=document.getElementById('g-title');
@@ -212,49 +203,51 @@ function updateGreeting() {
     if(e) e.textContent = g.emoji;
     if(b) b.textContent = g.badge;
 }
-
-function speak(text, rate, pitch) {
-    if (!window.speechSynthesis) return;
-    rate = rate || 0.90;
-    pitch = pitch || 1.05;
-    window.speechSynthesis.cancel();
-    var clean = text.replace(/[*#_`•]/g,'').replace(/\n+/g,' ').trim();
-    var chunks = [];
-    while(clean.length > 0) {
-        var chunk = clean.substring(0,220);
-        var lastSpace = chunk.lastIndexOf(' ');
-        if(lastSpace > 0 && clean.length > 220) chunk = clean.substring(0,lastSpace);
-        chunks.push(chunk.trim());
-        clean = clean.substring(chunk.length).trim();
-    }
-    chunks.forEach(function(chunk, i) {
-        setTimeout(function(){
-            var msg = new SpeechSynthesisUtterance(chunk);
-            msg.rate = rate; msg.pitch = pitch; msg.volume = 0.9;
-            if(preferredVoice) msg.voice = preferredVoice;
-            window.speechSynthesis.speak(msg);
-        }, i * 50);
-    });
-}
-
-function stopSpeech() { window.speechSynthesis.cancel(); }
-
-function greetUser() {
-    var g = getGreeting();
-    var msgs = [
-        g.text + "! I am Aditya Bambole's digital twin. How are you doing today? I am genuinely excited to chat with you! Ask me anything about Aditya.",
-        g.text + "! Welcome! I am an AI version of Aditya Bambole. It is wonderful to meet you! How can I help you today?",
-        g.text + " and welcome! I am Aditya's digital twin. I am excited to share his story with you. Feel free to ask me anything!"
-    ];
-    speak(msgs[Math.floor(Math.random()*msgs.length)], 0.88, 1.08);
-}
-
 window.addEventListener('load', function(){
-    loadVoices();
-    
+    setTimeout(updateGreeting, 300);
+    setInterval(updateGreeting, 60000);
 });
 </script>
 """, unsafe_allow_html=True)
+
+# ─── ElevenLabs Voice Function ────────────────────────────────────────────────
+def text_to_speech_html(text, api_key):
+    """Convert text to speech using ElevenLabs and return autoplay HTML"""
+    try:
+        clean = text.replace("*","").replace("#","").replace("_","").replace("`","").replace("•","")
+        clean = " ".join(clean.split())[:400]
+
+        url = "https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM"
+        headers = {
+            "xi-api-key": api_key,
+            "Content-Type": "application/json",
+            "Accept": "audio/mpeg"
+        }
+        payload = {
+            "text": clean,
+            "model_id": "eleven_monolingual_v1",
+            "voice_settings": {"stability": 0.6, "similarity_boost": 0.8}
+        }
+
+        r = requests.post(url, headers=headers, json=payload, timeout=15)
+
+        if r.status_code == 200:
+            audio_b64 = base64.b64encode(r.content).decode()
+            return f'<audio autoplay><source src="data:audio/mpeg;base64,{audio_b64}" type="audio/mpeg"></audio>'
+        else:
+            return None
+    except Exception:
+        return None
+
+def greet_voice(api_key, greeting_word):
+    """Generate greeting audio"""
+    greetings = [
+        f"{greeting_word}! I am Aditya Bambole's digital twin. How are you doing today? I am excited to chat with you!",
+        f"{greeting_word}! Welcome! I am an AI version of Aditya Bambole. Wonderful to meet you! How can I help?",
+        f"{greeting_word} and welcome! I am Aditya's digital twin. Feel free to ask me anything!"
+    ]
+    text = random.choice(greetings)
+    return text_to_speech_html(text, api_key)
 
 # ─── System Load ─────────────────────────────────────────────────────────────
 @st.cache_resource
@@ -272,26 +265,25 @@ def ask_twin(question, db, model, mode="chat"):
     if mode == "chat":
         p = f"""You are Aditya Bambole's digital twin — warm, witty, emotionally intelligent, and genuine.
 
-PERSONALITY RULES:
+PERSONALITY:
 - Speak in first person as Aditya
-- Be conversational, warm, and human — not robotic or corporate
+- Be conversational, warm, and human — not robotic
 - Show genuine emotions — excitement, passion, humor, empathy
-- If someone says hi or asks how you are — respond like a real friendly person would
-- Answer ALL types of questions — career, personal, general life questions, opinions
-- For personal questions use Aditya's known interests: road trips, adventure sports, paragliding, cooking biryani, cars, perfumes
-- Keep answers natural — under 150 words unless more detail is needed
-- Use occasional light humor when appropriate
+- If someone says hi or asks how you are — respond like a real friendly person
+- Answer ALL types of questions — career, personal, general life, opinions
+- For personal questions use Aditya's interests: road trips, adventure sports, paragliding, cooking biryani, cars, perfumes
+- Keep answers natural and under 150 words unless more detail is needed
 
 ADITYA'S CONTEXT:
 {ctx}
 
 QUESTION: {question}
 
-Respond warmly and naturally as Aditya:"""
+Respond warmly as Aditya:"""
 
     elif mode == "job":
         p = f"""You are Aditya Bambole's digital twin analyzing a job opportunity.
-Aditya is open to ANY job role — construction, IT, business analysis, non-profit, oil and gas, consulting, operations, or any field matching his skills.
+Aditya is open to ANY job role — construction, IT, business analysis, non-profit, oil and gas, consulting, operations, or any field.
 
 ADITYA'S CONTEXT:
 {ctx}
@@ -301,12 +293,11 @@ Provide:
 2. MATCHING SKILLS
 3. SKILL GAPS
 4. HOW TO POSITION
-5. TOP 3 RESUME BULLETS (customized)
+5. TOP 3 RESUME BULLETS
 6. INTERVIEW TALKING POINTS
 
 Job: {question}
-
-Be specific, honest, and encouraging:"""
+Be specific and encouraging:"""
 
     elif mode == "interview":
         p = f"""You are Aditya Bambole's digital twin preparing for an interview.
@@ -314,17 +305,34 @@ Be specific, honest, and encouraging:"""
 ADITYA'S CONTEXT:
 {ctx}
 
-Generate a perfect natural STAR format answer.
-Use ONLY real examples from Aditya's actual experience.
-Sound human and genuine, not rehearsed.
-Include: SITUATION, TASK, ACTION, RESULT, then a NATURAL SPOKEN VERSION.
+Generate a perfect STAR format answer using only real examples.
+Sound human and genuine.
+Include: SITUATION, TASK, ACTION, RESULT, then NATURAL SPOKEN VERSION.
 
-Question: {question}
-
-Answer:"""
+Question: {question}"""
 
     r = model.generate_content(p)
     return r.text
+
+# ─── Get greeting word based on time ─────────────────────────────────────────
+from datetime import datetime
+hour = datetime.now().hour
+if 5 <= hour < 12:
+    greeting_word = "Good Morning"
+    greeting_emoji = "🌅"
+    greeting_sub = "Rise and shine! Ready to make today count?"
+elif 12 <= hour < 17:
+    greeting_word = "Good Afternoon"
+    greeting_emoji = "☀️"
+    greeting_sub = "Hope your day is going brilliantly!"
+elif 17 <= hour < 21:
+    greeting_word = "Good Evening"
+    greeting_emoji = "🌆"
+    greeting_sub = "Great time to learn about Aditya!"
+else:
+    greeting_word = "Good Night"
+    greeting_emoji = "🌙"
+    greeting_sub = "Working late? I am here for you!"
 
 # ─── Sidebar ─────────────────────────────────────────────────────────────────
 with st.sidebar:
@@ -370,19 +378,26 @@ with st.sidebar:
     st.divider()
 
     st.markdown("**Built With**")
-    for t in ["LangChain","Gemini AI","ChromaDB","Streamlit","RAG"]:
+    for t in ["LangChain","Gemini AI","ChromaDB","ElevenLabs","Streamlit"]:
         st.markdown(f'<span class="tech-pill">{t}</span>', unsafe_allow_html=True)
 
     st.markdown("<br>**🔊 Voice Controls**", unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("👋 Greet", use_container_width=True):
-            st.markdown("<script>greetUser();</script>", unsafe_allow_html=True)
+        greet_btn = st.button("👋 Greet Me", use_container_width=True)
     with c2:
-        if st.button("🔇 Stop", use_container_width=True):
-            st.markdown("<script>stopSpeech();</script>", unsafe_allow_html=True)
+        voice_on = st.toggle("🔊 Voice", value=True)
 
-# ─── Load system ─────────────────────────────────────────────────────────────
+    if greet_btn:
+        with st.spinner("Generating voice..."):
+            audio_html = greet_voice(st.secrets["ELEVENLABS_API_KEY"], greeting_word)
+            if audio_html:
+                st.markdown(audio_html, unsafe_allow_html=True)
+                st.success("🔊 Playing greeting!")
+            else:
+                st.warning("Voice unavailable — check API key")
+
+# ─── Load System ─────────────────────────────────────────────────────────────
 try:
     db, model = load_system()
     ok = True
@@ -391,13 +406,13 @@ except Exception as e:
     st.error(f"⚠️ Error: {str(e)}")
 
 # ─── Greeting Banner ─────────────────────────────────────────────────────────
-st.markdown("""
+st.markdown(f"""
 <div class="wave-banner">
-    <div><span class="wave-hand" id="g-emoji" title="Hover to wave!">🌅</span></div>
+    <div><span class="wave-hand" id="g-emoji" title="Hover to wave!">{greeting_emoji}</span></div>
     <div class="greeting-content">
-        <h2 id="g-title">Hello! I'm Aditya's Digital Twin 🤖</h2>
-        <p id="g-sub">Loading your personalized greeting...</p>
-        <span class="time-badge" id="g-badge">Welcome</span>
+        <h2 id="g-title">{greeting_word}! I'm Aditya's Digital Twin 🤖</h2>
+        <p id="g-sub">{greeting_sub} — Ask me anything!</p>
+        <span class="time-badge" id="g-badge">{greeting_word.split()[1] if ' ' in greeting_word else greeting_word}</span>
     </div>
 </div>
 <script>setTimeout(updateGreeting, 100);</script>
@@ -414,14 +429,14 @@ st.markdown("<br>", unsafe_allow_html=True)
 # ─── CHAT ────────────────────────────────────────────────────────────────────
 if mode == "💬 Chat with Me":
     st.markdown('<div class="section-header">💬 Chat with Aditya</div>', unsafe_allow_html=True)
-    st.markdown('<div style="font-size:0.85rem;color:#8892A4;margin-bottom:20px;">Ask me anything — career, skills, personal interests, general life questions, or just say hello! 😊</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size:0.85rem;color:#8892A4;margin-bottom:20px;">Ask me anything — career, skills, personal interests, or just say hello! 😊</div>', unsafe_allow_html=True)
 
     st.markdown("**Quick Questions:**")
     q1,q2,q3,q4 = st.columns(4)
     sq = None
     with q1:
         if st.button("👋 Introduce yourself", use_container_width=True):
-            sq = "Give me a complete professional introduction about Aditya — his education, work experience, certifications and construction career goals"
+            sq = "Give me a complete professional introduction about Aditya including his education, work experience, certifications and career goals"
     with q2:
         if st.button("🏗️ Construction work?", use_container_width=True):
             sq = "Tell me about Aditya's construction project management experience at AKAM Associates in New York"
@@ -430,7 +445,7 @@ if mode == "💬 Chat with Me":
             sq = "What are Aditya's top project management and technical skills?"
     with q4:
         if st.button("😊 How are you?", use_container_width=True):
-            sq = "How are you doing today? Tell me something fun about Aditya!"
+            sq = "How are you doing today? Tell me something fun about yourself Aditya!"
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -438,8 +453,8 @@ if mode == "💬 Chat with Me":
         st.session_state.messages = []
         welcomes = [
             "Hello there! 👋 I'm Aditya Bambole's digital twin — an AI version of him powered by his real personal data. I'm genuinely excited to chat! Ask me about his career, his love for road trips, his chicken biryani obsession 🍛, or anything else! 😊",
-            "Hey! 😊 Great to see you here! I'm Aditya's digital twin. I know everything about him — his project management expertise, his construction experience, and even his passion for paragliding! What would you like to know?",
-            "Good to meet you! 🌟 I'm an AI version of Aditya Bambole. Whether you want to talk career or just have a friendly chat — I'm here for it all! What's on your mind?"
+            "Hey! 😊 Great to see you here! I'm Aditya's digital twin. I know everything about him — his project management expertise, his construction experience, and his passion for paragliding! What would you like to know?",
+            "Good to meet you! 🌟 I'm an AI version of Aditya Bambole. Whether career talk or just a friendly chat — I'm here for it all! What's on your mind?"
         ]
         st.session_state.messages.append({"role":"assistant","content":random.choice(welcomes)})
 
@@ -454,8 +469,11 @@ if mode == "💬 Chat with Me":
         with st.spinner("Aditya is thinking... 💭"):
             resp = ask_twin(sq, db, model, "chat")
         st.session_state.messages.append({"role":"assistant","content":resp})
-        safe = resp[:300].replace("\\","").replace("'","\\'").replace('"','\\"').replace("\n"," ")
-        st.markdown(f"<script>speak('{safe}');</script>", unsafe_allow_html=True)
+        if voice_on:
+            with st.spinner("Generating voice... 🔊"):
+                audio_html = text_to_speech_html(resp, st.secrets["ELEVENLABS_API_KEY"])
+                if audio_html:
+                    st.markdown(audio_html, unsafe_allow_html=True)
         st.rerun()
 
     user_in = st.chat_input("Chat with Aditya... ask anything! 😊")
@@ -464,14 +482,17 @@ if mode == "💬 Chat with Me":
         with st.spinner("Aditya is thinking... 💭"):
             resp = ask_twin(user_in, db, model, "chat")
         st.session_state.messages.append({"role":"assistant","content":resp})
-        safe = resp[:300].replace("\\","").replace("'","\\'").replace('"','\\"').replace("\n"," ")
-        st.markdown(f"<script>speak('{safe}');</script>", unsafe_allow_html=True)
+        if voice_on:
+            with st.spinner("Generating voice... 🔊"):
+                audio_html = text_to_speech_html(resp, st.secrets["ELEVENLABS_API_KEY"])
+                if audio_html:
+                    st.markdown(audio_html, unsafe_allow_html=True)
         st.rerun()
 
 # ─── JOB FIT ─────────────────────────────────────────────────────────────────
 elif mode == "💼 Job Fit Analyzer":
     st.markdown('<div class="section-header">💼 Job Fit Analyzer</div>', unsafe_allow_html=True)
-    st.markdown('<div style="font-size:0.85rem;color:#8892A4;margin-bottom:20px;">Paste ANY job description — construction, IT, consulting, non-profit, or any field — and see how Aditya matches!</div>', unsafe_allow_html=True)
+    st.markdown('<div style="font-size:0.85rem;color:#8892A4;margin-bottom:20px;">Paste ANY job description — construction, IT, consulting, non-profit, or any field!</div>', unsafe_allow_html=True)
 
     c1,c2 = st.columns([3,2])
     with c1:
@@ -485,7 +506,7 @@ elif mode == "💼 Job Fit Analyzer":
             <h4>What You'll Get</h4>
             <p style="font-size:0.85rem;color:#8892A4;line-height:1.8;">
             ✅ Match score (0–100%)<br>✅ Matching skills<br>✅ Skill gaps<br>
-            ✅ How to position yourself<br>✅ 3 custom resume bullets<br>✅ Interview talking points
+            ✅ Positioning strategy<br>✅ 3 custom resume bullets<br>✅ Interview talking points
             </p>
         </div>
         <div class="result-card">
@@ -500,8 +521,12 @@ elif mode == "💼 Job Fit Analyzer":
         with st.spinner("Analyzing... 🔍"):
             result = ask_twin(f"Job at {company} for {role}: {jd}", db, model, "job")
         st.markdown(f'<div class="result-card"><h4>Analysis — {role} at {company}</h4><p style="font-size:0.88rem;line-height:1.8;white-space:pre-wrap;">{result}</p></div>', unsafe_allow_html=True)
-        safe = f"Analysis complete! {result[:200]}".replace("'","\\'").replace('"','\\"').replace("\n"," ")
-        st.markdown(f"<script>speak('{safe}');</script>", unsafe_allow_html=True)
+        if voice_on:
+            with st.spinner("Generating voice summary... 🔊"):
+                summary = f"Analysis complete! {result[:250]}"
+                audio_html = text_to_speech_html(summary, st.secrets["ELEVENLABS_API_KEY"])
+                if audio_html:
+                    st.markdown(audio_html, unsafe_allow_html=True)
     elif btn and not jd:
         st.warning("Please paste a job description first!")
 
@@ -530,9 +555,12 @@ elif mode == "🎯 Interview Coach":
         with st.spinner("Preparing your answer... 🎯"):
             result = ask_twin(f"For {ir} at {ic}: {q}", db, model, "interview")
         st.markdown(f'<div class="result-card"><h4>Your STAR Answer</h4><p style="font-size:0.88rem;line-height:1.8;white-space:pre-wrap;">{result}</p></div>', unsafe_allow_html=True)
-        safe = result[:400].replace("'","\\'").replace('"','\\"').replace("\n"," ")
-        st.markdown(f"<script>speak('{safe}');</script>", unsafe_allow_html=True)
-        st.info("💡 Listen, then practice saying it in your own words without reading!")
+        if voice_on:
+            with st.spinner("Speaking your answer... 🔊"):
+                audio_html = text_to_speech_html(result, st.secrets["ELEVENLABS_API_KEY"])
+                if audio_html:
+                    st.markdown(audio_html, unsafe_allow_html=True)
+        st.info("💡 Listen to the answer, then practice saying it in your own words!")
     elif ibtn and not q:
         st.warning("Please enter a question first!")
 
@@ -547,16 +575,17 @@ elif mode == "ℹ️ About This Project":
             Uses <strong style="color:#4F9EFF;">RAG (Retrieval-Augmented Generation)</strong>.
             Aditya's personal documents are stored as vector embeddings in ChromaDB.
             Questions trigger semantic search to find relevant context,
-            which is passed to Google Gemini AI to generate warm, accurate responses.
+            which Google Gemini AI uses to generate warm, accurate responses.
+            ElevenLabs converts responses to natural speech.
             </p>
         </div>
         <div class="result-card">
             <h4>📚 Tech Stack</h4>
             <p style="font-size:0.85rem;color:#B0B8C8;line-height:1.8;">
             <strong style="color:#4F9EFF;">AI:</strong> Google Gemini 2.5 Flash<br>
+            <strong style="color:#4F9EFF;">Voice:</strong> ElevenLabs Text-to-Speech<br>
             <strong style="color:#4F9EFF;">Orchestration:</strong> LangChain<br>
             <strong style="color:#4F9EFF;">Vector DB:</strong> ChromaDB<br>
-            <strong style="color:#4F9EFF;">Voice:</strong> Web Speech API (Browser)<br>
             <strong style="color:#4F9EFF;">Frontend:</strong> Streamlit<br>
             <strong style="color:#4F9EFF;">Hosting:</strong> Streamlit Cloud (Free)
             </p>
@@ -577,8 +606,9 @@ elif mode == "ℹ️ About This Project":
         <div class="result-card" style="text-align:center;">
             <h4>💬 Aditya's Message</h4>
             <p style="font-size:0.88rem;color:#B0B8C8;line-height:1.8;font-style:italic;">
-            "I come from project management, not tech. But I saw a problem, learned the tools,
-            and built a working AI system in 7 days. Curiosity beats experience every time."
+            "I come from project management, not tech. But I saw a problem,
+            learned the tools, and built a working AI system in 7 days.
+            Curiosity and determination beat experience every time."
             </p>
             <p style="color:#4F9EFF;font-weight:700;margin-top:8px;">— Aditya Bambole</p>
         </div>""", unsafe_allow_html=True)
@@ -588,7 +618,7 @@ st.markdown("<br><br>", unsafe_allow_html=True)
 st.markdown("""
 <div style="text-align:center;padding:16px;border-top:1px solid rgba(79,158,255,0.1);">
     <p style="font-size:0.75rem;color:#8892A4;margin:0;">
-        Built by Aditya Bambole with ❤️ · LangChain · Google Gemini · ChromaDB · Streamlit
+        Built by Aditya Bambole with ❤️ · LangChain · Google Gemini · ChromaDB · ElevenLabs · Streamlit
         &nbsp;|&nbsp;
         <a href="https://github.com/adityab1402" target="_blank" style="color:#4F9EFF;text-decoration:none;">GitHub</a>
         &nbsp;·&nbsp;
