@@ -419,8 +419,8 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # Stats
-c1,c2,c3,c4 = st.columns(4)
-for col,(n,l) in zip([c1,c2,c3,c4],[("6+","Years Experience"),("6","Certifications"),("4","Industries"),("PMP","Certified")]):
+c1,c2,c3 = st.columns(3)
+for col,(n,l) in zip([c1,c2,c3],[("6+","Years Experience"),("6","Certifications"),("4","Industries")]):
     with col:
         st.markdown(f'<div class="stat-card"><div class="stat-number">{n}</div><div class="stat-label">{l}</div></div>', unsafe_allow_html=True)
 
