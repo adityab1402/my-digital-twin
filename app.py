@@ -10,7 +10,11 @@ st.set_page_config(
     page_title="Aditya Bambole | Digital Twin",
     page_icon="🤖",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': 'mailto:adityabambole14@gmail.com',
+        'About': 'Aditya Bambole Digital Twin — Built with LangChain, Gemini AI, and ChromaDB'
+    }
 )
 
 st.markdown("""
