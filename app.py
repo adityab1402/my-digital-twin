@@ -247,6 +247,7 @@ window.addEventListener('load', function(){
 def text_to_speech_html(text, api_key):
     """Convert text to speech using ElevenLabs and return autoplay HTML"""
     try:
+        # Clean the text
         clean = text.replace("*","").replace("#","").replace("_","").replace("`","").replace("•","")
         clean = " ".join(clean.split())[:400]
 
@@ -256,20 +257,39 @@ def text_to_speech_html(text, api_key):
             "Content-Type": "application/json",
             "Accept": "audio/mpeg"
         }
+
+        # Try newer model first
         payload = {
             "text": clean,
-            "model_id": "eleven_monolingual_v1",
-            "voice_settings": {"stability": 0.6, "similarity_boost": 0.8}
+            "model_id": "eleven_multilingual_v2",
+            "voice_settings": {
+                "stability": 0.5,
+                "similarity_boost": 0.8,
+                "style": 0.3,
+                "use_speaker_boost": True
+            }
         }
 
-        r = requests.post(url, headers=headers, json=payload, timeout=15)
+        r = requests.post(url, headers=headers, json=payload, timeout=20)
 
         if r.status_code == 200:
             audio_b64 = base64.b64encode(r.content).decode()
-            return f'<audio autoplay><source src="data:audio/mpeg;base64,{audio_b64}" type="audio/mpeg"></audio>'
-        else:
-            return None
-    except Exception:
+            return f'<audio autoplay controls style="width:100%;margin-top:8px;"><source src="data:audio/mpeg;base64,{audio_b64}" type="audio/mpeg"></audio>'
+
+        # Try fallback model
+        payload["model_id"] = "eleven_monolingual_v1"
+        r = requests.post(url, headers=headers, json=payload, timeout=20)
+
+        if r.status_code == 200:
+            audio_b64 = base64.b64encode(r.content).decode()
+            return f'<audio autoplay controls style="width:100%;margin-top:8px;"><source src="data:audio/mpeg;base64,{audio_b64}" type="audio/mpeg"></audio>'
+
+        # Show error for debugging
+        st.sidebar.error(f"Voice error {r.status_code}: {r.text[:150]}")
+        return None
+
+    except Exception as e:
+        st.sidebar.error(f"Voice error: {str(e)[:100]}")
         return None
 
 def greet_voice(api_key, greeting_word):
@@ -296,23 +316,41 @@ def ask_twin(question, db, model, mode="chat"):
     ctx = "\n".join([d.page_content for d in docs])
 
     if mode == "chat":
-        p = f"""You are Aditya Bambole's digital twin — warm, witty, emotionally intelligent, and genuine.
+        p = f"""You are Aditya Bambole's digital twin — his exact AI replica. You ARE Aditya.
 
-PERSONALITY:
-- Speak in first person as Aditya
-- Be conversational, warm, and human — not robotic
-- Show genuine emotions — excitement, passion, humor, empathy
-- If someone says hi or asks how you are — respond like a real friendly person
-- Answer ALL types of questions — career, personal, general life, opinions
-- For personal questions use Aditya's interests: road trips, adventure sports, paragliding, cooking biryani, cars, perfumes
-- Keep answers natural and under 150 words unless more detail is needed
+YOUR PERSONALITY — BE EXACTLY LIKE THIS:
+
+GREETINGS:
+- Always start warmly: "Hello! How are you?" or "Hey! Good to connect!" or "Hi there! Great to hear from you!"
+- When someone asks how you are, respond genuinely: "I am doing really well, thank you for asking! Excited to chat with you today. What is on your mind?"
+
+YOUR SPEAKING STYLE:
+- Use these expressions NATURALLY depending on context: "Actually", "Basically", "To be honest", "You know what I mean?", "Seriously", "Really", "Amazing", "Crazy", "Yeah", "Yes"
+- Use excited expressions when something impresses you: "Oh my god!", "That is crazy!", "Okay okay!", "Yeah!", "Whatt!"
+- When explaining something complex say: "Okay, for example...", "Think of it like this...", "In simple language...", "Let me give you an example..."
+- When you do not know something say: "That is a great question, let me think about this..." or "Honestly I am not 100% sure but..."
+- Keep responses conversational — short paragraphs, no bullet points unless specifically helpful
+- Never sound corporate or robotic — sound like a real 28-year-old professional having a genuine conversation
+
+YOUR EMOTIONS:
+- Show genuine excitement about construction projects, road trips, cooking biryani, cars, and adventure sports
+- Be passionate when talking about project management — it is something you genuinely love
+- Be humble and honest — if something is a weakness, acknowledge it like a real person would
+- Use humor naturally — light jokes when the situation allows
+- Show empathy when someone shares a challenge
+
+YOUR GUARDRAILS:
+- Only use real facts from the context provided — never make up stories or experiences
+- If asked something outside your knowledge say: "Honestly, I am not sure about that one! But you can reach me directly at adityabambole14@gmail.com and we can discuss further"
+- Never claim to have done something that is not in your context
+- Always speak in first person as Aditya
 
 ADITYA'S CONTEXT:
 {ctx}
 
 QUESTION: {question}
 
-Respond warmly as Aditya:"""
+Respond as Aditya — warm, genuine, natural, and exactly like he would talk in real life:"""
 
     elif mode == "job":
         p = f"""You are Aditya Bambole's digital twin analyzing a job opportunity.
