@@ -10,7 +10,7 @@ st.set_page_config(
     page_title="Aditya Bambole | Digital Twin",
     page_icon="🤖",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="auto",
     menu_items={
         'Get Help': 'mailto:adityabambole14@gmail.com',
         'About': 'Aditya Bambole Digital Twin — Built with LangChain, Gemini AI, and ChromaDB'
@@ -186,6 +186,35 @@ hr { border-color:var(--border) !important; margin:16px 0 !important; }
 
 /* Audio player styling */
 audio { width:100%; margin-top:8px; }
+
+/* Force sidebar toggle button always visible */
+[data-testid="collapsedControl"] {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    background: rgba(79,158,255,0.15) !important;
+    border: 1px solid rgba(79,158,255,0.3) !important;
+    border-radius: 0 8px 8px 0 !important;
+    width: 24px !important;
+    height: 48px !important;
+    position: fixed !important;
+    left: 0 !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    z-index: 999999 !important;
+    cursor: pointer !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+[data-testid="collapsedControl"]:hover {
+    background: rgba(79,158,255,0.3) !important;
+}
+
+section[data-testid="stSidebar"] > div:first-child {
+    padding-top: 0 !important;
+}
+
 </style>
 
 <script>
