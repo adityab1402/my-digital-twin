@@ -425,6 +425,56 @@ for col,(n,l) in zip([c1,c2,c3],[("6+","Years Experience"),("6","Certifications"
         st.markdown(f'<div class="stat-card"><div class="stat-number">{n}</div><div class="stat-label">{l}</div></div>', unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
+# ─── Live Motivational Quote ──────────────────────────────────────────────────
+import requests as _req
+
+def get_live_quote():
+    try:
+        response = _req.get("https://api.quotable.io/random", timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            return data["content"], data["author"]
+        else:
+            return "Success is not final, failure is not fatal: it is the courage to continue that counts.", "Winston Churchill"
+    except Exception:
+        return "The secret of getting ahead is getting started.", "Mark Twain"
+
+quote_text, quote_author = get_live_quote()
+
+st.markdown(f"""
+<div style="
+    background: linear-gradient(135deg, rgba(79,158,255,0.06), rgba(0,229,160,0.04));
+    border: 1px solid rgba(79,158,255,0.2);
+    border-left: 4px solid #4F9EFF;
+    border-radius: 12px;
+    padding: 18px 24px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+">
+    <div style="
+        position: absolute; top: 8px; left: 12px;
+        font-size: 3rem; color: rgba(79,158,255,0.15);
+        font-family: Georgia, serif; line-height: 1;
+    ">"</div>
+    <div style="
+        font-size: 0.95rem;
+        color: #D0D8F0;
+        font-style: italic;
+        line-height: 1.7;
+        padding-left: 20px;
+        padding-right: 20px;
+    ">{quote_text}</div>
+    <div style="
+        font-size: 0.78rem;
+        color: #4F9EFF;
+        font-weight: 700;
+        margin-top: 10px;
+        padding-left: 20px;
+        letter-spacing: 0.5px;
+    ">— {quote_author}</div>
+</div>
+""", unsafe_allow_html=True)
 
 # ─── CHAT ────────────────────────────────────────────────────────────────────
 if mode == "💬 Chat with Me":
