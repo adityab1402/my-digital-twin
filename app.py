@@ -428,6 +428,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 # ─── Live Motivational Quote ──────────────────────────────────────────────────
 import requests as _req
 
+@st.cache_data(ttl=60)
 def get_live_quote():
     try:
         response = _req.get("https://api.quotable.io/random", timeout=5)
