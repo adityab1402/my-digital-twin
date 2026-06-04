@@ -411,15 +411,73 @@ except Exception as e:
 
 # ─── Greeting Banner ─────────────────────────────────────────────────────────
 st.markdown(f"""
-<div class="wave-banner">
-    <div><span class="wave-hand" id="g-emoji" title="Hover to wave!">{greeting_emoji}</span></div>
-    <div class="greeting-content">
-        <h2 id="g-title">{greeting_word}! I'm Aditya's Digital Twin 🤖</h2>
-        <p id="g-sub">{greeting_sub} — Ask me anything!</p>
-        <span class="time-badge" id="g-badge">{greeting_word.split()[1] if ' ' in greeting_word else greeting_word}</span>
+<div style="
+    background: linear-gradient(135deg, rgba(79,158,255,0.1), rgba(0,229,160,0.05));
+    border: 1px solid rgba(79,158,255,0.15);
+    border-radius: 20px;
+    padding: 28px 32px;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    animation: slide-in 0.7s cubic-bezier(0.16,1,0.3,1);
+">
+    <div style="flex-shrink:0;">
+        <div style="
+            font-size: 4rem;
+            display: inline-block;
+            animation: wave-anim 1.5s ease-in-out 3;
+            transform-origin: 70% 70%;
+            cursor: pointer;
+        " title="Hover to wave!">👋</div>
+    </div>
+    <div>
+        <h2 style="
+            font-family: Sora, sans-serif;
+            font-size: 1.6rem;
+            font-weight: 800;
+            margin: 0 0 6px;
+            color: #F0F4FF;
+            line-height: 1.2;
+        ">{greeting_word}! I'm Aditya's Digital Twin 🤖</h2>
+        <p style="
+            font-size: 0.9rem;
+            color: #8892A4;
+            margin: 0 0 8px;
+        ">{greeting_sub} — Ask me anything!</p>
+        <span style="
+            display: inline-block;
+            background: rgba(79,158,255,0.15);
+            border: 1px solid rgba(79,158,255,0.3);
+            color: #4F9EFF;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 20px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        ">{greeting_word.split()[1] if ' ' in greeting_word else greeting_word}</span>
     </div>
 </div>
-<script>setTimeout(updateGreeting, 100);</script>
+
+<style>
+@keyframes wave-anim {{
+    0%   {{ transform: rotate(0deg); }}
+    15%  {{ transform: rotate(25deg); }}
+    30%  {{ transform: rotate(-10deg); }}
+    45%  {{ transform: rotate(20deg); }}
+    60%  {{ transform: rotate(-5deg); }}
+    75%  {{ transform: rotate(15deg); }}
+    100% {{ transform: rotate(0deg); }}
+}}
+@keyframes slide-in {{
+    from {{ opacity: 0; transform: translateY(-20px); }}
+    to   {{ opacity: 1; transform: translateY(0); }}
+}}
+div[title="Hover to wave!"]:hover {{
+    animation: wave-anim 0.8s ease-in-out infinite !important;
+}}
+</style>
 """, unsafe_allow_html=True)
 
 # Stats
