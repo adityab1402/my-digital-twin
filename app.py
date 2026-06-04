@@ -487,20 +487,56 @@ for col,(n,l) in zip([c1,c2,c3],[("6+","Years Experience"),("6","Certifications"
         st.markdown(f'<div class="stat-card"><div class="stat-number">{n}</div><div class="stat-label">{l}</div></div>', unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
+
 # ─── Live Motivational Quote ──────────────────────────────────────────────────
+
 import requests as _req
 
 @st.cache_data(ttl=60)
 def get_live_quote():
+    # Try ZenQuotes API first
     try:
-        response = _req.get("https://api.quotable.io/random", timeout=5)
+        response = _req.get("https://zenquotes.io/api/random", timeout=5)
         if response.status_code == 200:
             data = response.json()
-            return data["content"], data["author"]
-        else:
-            return "Success is not final, failure is not fatal: it is the courage to continue that counts.", "Winston Churchill"
+            return data[0]["q"], data[0]["a"]
     except Exception:
-        return "The secret of getting ahead is getting started.", "Mark Twain"
+        pass
+    
+    # Try Type.fit API second
+    try:
+        response = _req.get("https://type.fit/api/quotes", timeout=5)
+        if response.status_code == 200:
+            import random as _rand
+            quotes = response.json()
+            quote = _rand.choice(quotes)
+            author = quote.get("author", "Unknown") or "Unknown"
+            if ", type.fit" in author:
+                author = author.replace(", type.fit", "")
+            return quote["text"], author
+    except Exception:
+        pass
+    
+    # Final fallback — built in quotes list
+    import random as _rand
+    fallback_quotes = [
+        ("The secret of getting ahead is getting started.", "Mark Twain"),
+        ("It always seems impossible until it is done.", "Nelson Mandela"),
+        ("Believe you can and you are halfway there.", "Theodore Roosevelt"),
+        ("The only way to do great work is to love what you do.", "Steve Jobs"),
+        ("Success is not final, failure is not fatal.", "Winston Churchill"),
+        ("Don't watch the clock. Do what it does. Keep going.", "Sam Levenson"),
+        ("Whether you think you can or think you cannot, you are right.", "Henry Ford"),
+        ("You don't have to be great to start, but you have to start to be great.", "Zig Ziglar"),
+        ("Dream big. Start small. Act now.", "Robin Sharma"),
+        ("The harder you work for something, the greater you feel when you achieve it.", "Unknown"),
+        ("Push yourself because no one else is going to do it for you.", "Unknown"),
+        ("Great things never come from comfort zones.", "Unknown"),
+        ("Do something today that your future self will thank you for.", "Sean Patrick Flanery"),
+        ("The best time to plant a tree was 20 years ago. The second best time is now.", "Chinese Proverb"),
+        ("An investment in knowledge pays the best interest.", "Benjamin Franklin"),
+    ]
+    return _rand.choice(fallback_quotes)
 
 quote_text, quote_author = get_live_quote()
 
