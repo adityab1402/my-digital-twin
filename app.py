@@ -261,7 +261,7 @@ def text_to_speech_html(text, api_key):
         # Try newer model first
         payload = {
             "text": clean,
-            "model_id": "eleven_multilingual_v2",
+            "model_id": "eleven_turbo_v2_5",
             "voice_settings": {
                 "stability": 0.5,
                 "similarity_boost": 0.8,
@@ -277,7 +277,7 @@ def text_to_speech_html(text, api_key):
             return f'<audio autoplay controls style="width:100%;margin-top:8px;"><source src="data:audio/mpeg;base64,{audio_b64}" type="audio/mpeg"></audio>'
 
         # Try fallback model
-        payload["model_id"] = "eleven_monolingual_v1"
+        payload["model_id"] = "eleven_turbo_v2"
         r = requests.post(url, headers=headers, json=payload, timeout=20)
 
         if r.status_code == 200:
